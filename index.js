@@ -1,109 +1,106 @@
-const { Plugin, segment } = require('keli')
+const { Plugin, segment, http, wait } = require('keli')
 
 const { version } = require('./package.json')
-const plugin = new Plugin('msgrecall', version)
+const plugin = new Plugin('keli-daily60s', version)
 
-const config = { enableGroupList: [], sendToGroup: true, sendToMainAdmin: true, sendForwardMsg: true}
+const config = { 
+  time: 6, 
+  enableGroup: [], 
+  enablePrivate: [], 
+}
 
 plugin.onMounted((bot, admins) => {
   plugin.saveConfig(Object.assign(config, plugin.loadConfig()))
 
-  /**
-   * 保存符合条件的每一条群聊的消息
-   * mid 该消息的 message_id
-   * message 撤回的消息
-   */
-  let data = new Array();
-  let mid, message;
-  plugin.onGroupMessage((event) => {
-    // 加个判断是因为电脑发的图片什么的属于群文件，获取不了消息(提取消息很麻烦，懒得写)
-    if(event.message[0].type !== 'file'){
-      mid = event.message_id;
-      message = event.message;
-      data.push({"message_id": mid, "message": message})
-    }
-    //** 每隔两分钟清理已经不能撤回的消息 */
-    setTimeout(()=>data.shift(), 120000)
+  const api = "https://api.vvhan.com/api/60s"
+  plugin.onCmd("今日新闻", async (event, params, options) => {
+    let data  = await http.get(api)
+    let res = data.request.res.responseUrl
+    let msg = segment.image(res)
+    event.reply(msg)
   })
 
-  // 直接私聊机器人添加群聊，更方便啦~
-  plugin.onAdminCmd("/msgrecall", (event, params, options) => {
-    const [param, group_id] = params
-    if(param === 'add'){
-      if(~config.enableGroupList.indexOf(group_id)){
-        event.reply('[群聊反撤回]启用群聊中已有该群聊，请勿重复添加')
-        return
-      } else {
-        config.enableGroupList.push(group_id)
+  // 管理员操作
+  plugin.onAdminCmd("/60s", (event, params, options) => {
+    const [param, other] = params
+    const n = Number(event.raw_message
+      .replace("/60s", "")
+      .replace(param, "")
+      .replace(other, "")
+      .trim())
+    let test = (array, element) => {
+      if(~array.indexOf(element)) return true;
+      return false
+    }
+    if(param === 'g'){
+      if(other === 'add'){
+        if(test(config.enableGroup, n)){ event.reply("[daily60s]该群已存在60s新闻提醒列表，请勿重复操作", true); return}
+        config.enableGroup.push(Number(n))
         plugin.saveConfig(config)
-        event.reply("[群聊反撤回]群聊添加成功，重载生效")
+        event.reply("[daily60s]成功将该群聊纳入每日60s新闻提醒列表，重载插件生效", true)
+      } else if(other === 'delete'){
+        if(!test(config.enableGroup, n)){ event.reply("[daily60s]移除失败，该群未纳入每日60s新闻提醒列表", true); return}
+        let temp = config.enableGroup.indexOf(n)
+        config.enableGroup.splice(temp, 1)
+        plugin.saveConfig(config)
+        event.reply("[daily60s]成功将该群移出每日60s新闻提醒列表， 重载插件成效", true)
       }
-    } else if(param === 'delete'){
-      config.enableGroupList.forEach(e => {
-        if(e === group_id){
-          if(~config.enableGroupList.indexOf(group_id)){
-            config.enableGroupList.splice(config.enableGroupList.indexOf(group_id), 1)
-            plugin.saveConfig(config)
-            event.reply("[群聊反撤回]群聊删除成功，重载生效")
-          } else {
-            event.reply('没有找到该群号')
-          }
-        }
-      })
+    } else  if(param === 'p') {
+      if(other === 'add'){
+        if(test(config.enablePrivate, n)){ event.reply("[daily60s]该QQ已存在每日60s新闻提醒列表，请勿重复操作", true); return}
+        config.enablePrivate.push(Number(n))
+        plugin.saveConfig(config)
+        event.reply("[daily60s]成功将该QQ纳入每日60s新闻提醒列表，重载插件生效", true)
+      } else if(other === 'delete'){
+        if(!test(config.enablePrivate, n)){ event.reply("[daily60s]移除失败，该QQ未纳入每日60s新闻提醒列表", true); return}
+        let temp = config.enablePrivate.indexOf(n)
+        config.enablePrivate.splice(temp, 1)
+        plugin.saveConfig(config)
+        event.reply("[daily60s]成功将该QQ移出每日60s新闻提醒列表，重载插件成效", true)
+      }
+    } else if(param === 'time') {
+      config.time = n
+      plugin.saveConfig(config)
+      event.reply(`[daily60s]成功将每日60s的时间调整为${config.time}:00，重载插件生效`,true)
+    } else if(param === 'list') {
+      if(config.enableGroup == 0 && config.enablePrivate == 0){
+        event.reply("每日60s提醒列表为空")
+        return
+      }
+      let msg = `每日60s提醒时间：${config.time}:00\n`
+      msg += '私聊提醒：\n'
+      for(let i of config.enablePrivate){
+        msg += '\t'
+        msg += i
+        msg += '\n'
+      }
+      msg += '群提醒：\n'
+      for(let i of config.enableGroup){
+        msg += '\t'
+        msg += i
+        msg += '\n'
+      }
+      event.reply(msg)
     } else {
-      event.reply('/msgrecall add [群号]\n/msgrecall delete [群号]')
+      event.reply("设置每日提醒时间(小时): /60s time [0~24]\n查看提醒列表：/60s list\n添加群提醒：/60s g add [群号]\n删除群提醒：/60s g delete [群号]\n添加私聊提醒：/60s p add [QQ号]\n删除私聊提醒：/60s p delete [QQ号]")
     }
   })
 
-  //** 群聊消息反撤回 */
-  plugin.on("notice.group.recall", async event => {
-    // 判断是不是 enableGroupList 里的群聊且撤回消息的不能是本机器人
-    let recall_msg;
-    // 先遍历数组 data
-    for(let i = 0; i < data.length;i++){
-      if(data[i]['message_id'] === event.message_id){
-        recall_msg = data[i]['message'];
-        break;
-      }
+  plugin.cron(`10 0 ${config.time} * * *`, async (bot, admins) => {
+    let data = await http.get(api)
+    let res = data.request.res.responseUrl
+    let msg = segment.image(res)
+    
+    for(let i of config.enablePrivate){
+      await bot.sendPrivateMsg(i, msg)
+      wait(Math.floor(Math.random*10))
     }
-
-    // 捕捉错误
-    if(recall_msg == undefined || event.user_id == bot.uin) {
-      plugin.logger.warn("[群聊反撤回]: 该消息忽略，原因：1.是群文件消息;2.是机器人自己的消息;3.是机器人上线前发的消息")
-      return;
-    };
-    // 是否将撤回消息发送至群聊
-    if (config.enableGroupList.includes(event.group_id) && config.sendToGroup) {
-      const message = [
-        segment.at(event.user_id),
-        `撤回了:\n`,
-      ]
-      message.push.apply(message, recall_msg);
-      await bot.sendGroupMsg(event.group_id, message);
+    for(let i of config.enableGroup){
+      console.log(i, typeof i);
+      await bot.sendGroupMsg(i, msg)
+      wait(Math.floor(Math.random*10))
     }
     
-    // 撤回的消息是否发给 mainAdmin
-    if(config.sendToMainAdmin)
-    {
-      let msg = `--群消息反撤回--\n群聊: ${event.group_id}\n用户: ${event.user_id}`
-      if(config.sendForwardMsg){
-        // 获取网名
-        let friendInfo = await bot.getStrangerInfo(event.user_id);
-        // 合并转发
-        let list = [
-          {message: msg, user_id: event.user_id, nickname: friendInfo.nickname},
-          {message: recall_msg, user_id: event.user_id, nickname: friendInfo.nickname}
-        ];
-        // 备忘：dm 为 true 为私聊消息，false 为群聊消息，QQ 底层里私聊与群聊的视频、图片、语音资源都是不一样的
-        // 可能会互不兼容
-        let forwardMsg = await bot.makeForwardMsg(list, "群消息反撤回", undefined, true)
-        await bot.sendPrivateMsg(plugin.mainAdmin, forwardMsg)
-      } else {
-        await bot.sendPrivateMsg(plugin.mainAdmin, msg)
-        setTimeout(()=>{bot.sendPrivateMsg(plugin.mainAdmin, recall_msg)}, 1000)
-      }
-    }
-
   })
 })
 

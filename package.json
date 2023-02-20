@@ -1,23 +1,22 @@
 {
-  "name": "keli-msgrecall",
-  "version": "1.0.2",
-  "description": "群聊反撤回，让我康康撤回了什么好康的！！！",
+  "name": "keli-daily60s",
+  "version": "1.0.0",
+  "description": "每日新闻60s，让你知晓天下事",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Admsec/keli-msgrecall.git"
+    "url": "git+https://github.com/Admsec/keli-daily60s.git"
   },
   "keywords": [
-    "kelibot",
-    "keli-plugin"
+    "keli"
   ],
   "author": "Admsec <admsec223@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Admsec/keli-msgrecall/issues"
+    "url": "https://github.com/Admsec/keli-daily60s/issues"
   },
-  "homepage": "https://github.com/Admsec/keli-msgrecall#readme"
+  "homepage": "https://github.com/Admsec/keli-daily60s#readme"
 }

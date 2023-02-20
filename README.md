@@ -1,49 +1,37 @@
-## 群聊反撤回 for Kivibot
+## 每日60s for kelibot
 
-kivibot 的无数据库群聊反撤回插件(可以单发给管理员，让我康康撤回了什么好康的！！)
+每日新闻60s，让你知晓天下事
 
 ### 安装
 
 ```
-/plugin add msgrecall
+/plugin add daily60s
 ```
 
 ### 启用
 
 ```
-/plugin on msgrecall
+/plugin on daily60s
 ```
 
 ### 用法
 
-本插件有两种启用方式
+本插件有两种使用方式
 
-1. 私聊机器人，添加启用群聊
+第一种：无论群聊还是私聊也可以，直接对机器人说：今日新闻
 
-```
-/p add [你的群号]
-/p rl msgrecall
-
-// 如果想禁用群聊，你可以这样
-/p delete [你的群号]
-```
-
-2. 前往 插件目录/data/plugins/群消息反撤回/config.json 里填好相关信息
+第二种：定时任务，需要管理员向机器人添加需要发送每日60s的QQ或群聊(默认每日6点发送提醒，可自行修改)
 
 ```
-{
-  // 启用的群聊
-  "enableGroupList": [],
-  // 是否跟发(有人撤回了消息后，机器人立刻跟发)
-  "sendToGroup": true,
-  // 是否偷偷把撤回的消息发给管理员(如有多个管理员则发给第一个)
-  "sendToMainAdmin": true,
-  // 私聊是否合并转发(1.1.4新增)
-  "sendForwardMsg": true
-}
+// 添加私聊提醒
+/60s p add [qq]
 
+//添加群聊提醒
+/60s g add [群id]
+
+//每次修改需要重载插件生效
+/p rl daily60s
+
+如何知道所有命令？管理员对机器人发送"/60s"即可查看所有可用命令
 ```
 
-### 示例
-
-自己找个群测试就好，记得测试前填好 config.json
